@@ -3,223 +3,209 @@
 ## Changes
 
 ### Project Goals
- This project was inspired and guided by a Jupyter notebook that creates a custom Artificial Neural Network to complete a Binary Classification task. This notebooks can be found [here](https://www.kaggle.com/code/mahimashukla12/binary-classification-churn-problem) for credit to the author and reference for those interested.
-  The notebook referenced creates a Neural Network and trains its to classify whether a credit card customer will switch banks using a dataset of customer information. This goal of this project adapts that code and attempts to instead use Regression to return the probability that a Graduate student will be admitted to Masters programmes based on a number of features around the student and rating of the college.
+ This project was inspired and guided by a Jupyter notebook which explores the use of Recurrent Neural Networks for time series prediction. This notebook explores both Long Short Term Memory (LSTM) and Gated Recurrent Unit (GRU) neural networks. The goal of that project is to predict IBM stock prices and can be found [here](https://www.kaggle.com/code/thebrownviking20/intro-to-recurrent-neural-networks-lstm-gru) for credit to the author and reference for those interested.
+  The project adapts that code with the new goal of using an LSTM model to predict Forex exchanges rates in particular from USD to Euros. 
 
 ### Data Source
-<p> The source notebook utilises a different dataset as per its project requirements. This project instead uses the dataset explained below:
+<p> The source notebook does not use a set dataset but instead using webscraping library such as pandas_datareader to import the data straight from the internet. The data sources used are: 
 
-1. **Graduates Admission Prediction**
-    - **Description**: This dataset is from information gathered about Indian colleges and their admissions history. The colleges are not identified but instead placed in buckets under their overall rating. The dataset contains 500 rows with 7 features including data like the student GPA, college rating and quality of the letter of recommendation and a final column which is a probability from 0 to 1 of admission to the college. The dataset was compiled to help students in shortlisting which colleges they should apply to given the average chance of admission based on these 7 features.
-    - **Usage**: This dataset will be used to develop a Neural Network to return the probability of admission given the inpiut parameters.
-    - **Source Quality**: This dataset was sourced from Kaggle and has a high usability score from Kaggle users.
-    - **Link**: [here](https://www.kaggle.com/datasets/alessiocorrado99/animals10/download?datasetVersionNumber=2)</p>
+1. **Federal Reserve Economic Data**
+    - **Description**: This data source is the Federal Reserve Economic Data (FRED) which is webscraped using the pandas_datareader library. The data being imported is the US Dollars to Euro Exchange Rate (DEXUSEU).
+    - **Usage**: This dataset will be used to develop a Neural Network which will attempt to use the data to predict future values of the exchange.
+    - **Source Quality**: This dataset was sourced from FRED which is a trusted source for economic data.
+
+2. **Yahoo Finance**
+    - **Description**: The yFinance library is employed to fetch historical currency exchange rate data from Yahoo Finance. The data retrieved is the US Dollars (USD) to Euro (EUR) exchange rate but with additional feature such as High, Low and Opening Prices for each day.
+    - **Usage**:  This dataset serves as an alternative source of historical exchange rate data and will be utilized for developing a predictive model to forecast future USD to EUR exchange rates.
+    - **Source Quality**: Yahoo Finance is a widely used platform for accessing financial market data, and yFinance is a reliable Python library for fetching this data, thus ensuring the quality and reliability of the dataset.
+
+2. **pandas_ta Library**
+    - **Description**: The pandas_ta library is utilized to compute various technical analysis indicators, including the Moving Average (MA60), Relative Strength Index (RSI), and others, directly from the imported exchange rate data.
+    - **Usage**:  These TA indicators serve to add additional data about price movements and market sentiment of the USD to EUR exchange rate. These will be used to allow models to learn more complex patterns into possible trends in the exchange rate values.
+    - **Source Quality**:  The pandas_ta library is widely used in financial analysis and is known for its accuracy and reliability in computing TA indicators.
 
 ### Data Exploration
-<p> As this project is using a different dataset, some data exploration and preprocessing is required to make sure the data is clean and ready for modelling. The first steps in data exploration was to perform preliminary data exploration to understand the dataset and its features. There are 500 rows in total in the dataset with the following features:
-
-1. GRE Scores - This is a common entrance exam in India.
-2. TOEFL Scores - This is a English Test commonly used in India.
-3. University Rating - This is on a discrete scale of 1 to 5.
-4. SOP - This is a rating of the Statement of Purpose on a continuous scale of 1 to 5.
-5. LOR - This is a rating of the Letter of Recommendation on a continuous scale of 1 to 5.
-6. CGPA - This is the Undergraduate GPA the candidate achieved on a continuous scale from 1 to 10
-7. Research Experience - A Binary value of either 0 - None or 1 - Have Research Experience
-8. Chance of Admit - The probability that the candidate will achieve admission between 0 and 1.
-
-Visualising these totals on a graph we can immediately see that:
-- GRE, TOEFL, CGPA and Chance of Admit values follow a normal distribution
-- Research Experience is a binary value
-- All other columns while having uneven distribution are scale values
-
-![Frequency Distributions](Images/graph1.png)
-
-Given these distribution, I do not think that uneven distribution will cause problems for training our algorithm.
-
-The next change in data exploration was to check if the dataset needs any cleaning. The usual steps were taken to find any rows with null values or duplicated rows. For this dataset neither problems were found so proceeding to additional data preprocessing could proceed.
-
-### Data Processing
-
-#### Create feature vector and dependent variables
-As all columns were numeric, no data transformation were required and the project could proceed to seperating the dependent variable from the feature vector. This was done using the code below by seperating out the column to be predicted that being "Chance to Admit".
+<p> As this project is using a different dataset with webscraped dat, some data exploration and preprocessing is required to make sure the data is clean and ready for modelling. The first steps in data exploration was to perform preliminary data exploration to understand the dataset and its features. For the first model, data on the spot USD to Euro exchange rate was imported with a date range from 2020 to the current date with the code below:
 
 ```
-X = data_grad.drop(['Chance of Admit '], axis=1)
-X = X.values
-y = data_grad['Chance of Admit ']
-y = y.values
+tickers = ['DEXUSEU']
+data_source = 'fred'
+end_date = datetime.date.today()
+df = web.DataReader(tickers, data_source,'2020-01-01', datetime.date.today())
 ```
 
-#### Create training and test data
-No changes were required here and the data was split into training and test data at a 80/20 data split.
+In this data, there are 1048 rows of the spot exchange rate, representing 1048 different day rates from 2020 to the current date. 
 
-#### Data transformations
-In the project being followed, StandardScalar was used to transform the data before training. In this project, a change was made were both MinMaxScalar and StandardScalar were used seperately so the best method for normalisation/scaling could be deduced for this project's particular needs. StandardScalar removes unit variance but that may be deterministic for this project so both methods were to be tested seperately to determine the best method using the code below:
+![2020 to 2023](Images/trend.png)
+
+Visualising these totals on a graph we can how the rate has flucated over time with the highest exchange rate occuring at the start of 2021 and the lowest being the end of 2022.<br><br>
+
+### Data Pre-processing
+
+#### Data Cleaning
+
+The next change in data exploration was to check if the dataset needs any cleaning. The usual steps were taken to find any rows with null values. For this dataset, 48 rows with null values were found and removed.
+
+#### Split training and test sets
+The start of 2023 marks the split between the training and test sets with all data before that date used for training and all data after that date used as the test set. This works out as a roughly 70/30 split with 749 rows in the training set and 311 in the test set. This split and is done with the following code.
 
 ```
-scale=MinMaxScaler()
-X_train_norm=scale.fit_transform(X_train)
-X_test_norm=scale.fit_transform(X_test)
+training_set = df[:'2022'].iloc[:,0:1].values
+test_set = df['2023':].iloc[:,0:1].values
+```
 
-scale=StandardScaler()
-X_train_scale=scale.fit_transform(X_train)
-X_test_scale=scale.fit_transform(X_test)
+#### Normalise data
+As there is a single numeric column, no data transformation were required but the value in the column is normalised even though this is not technically required as there is only one column. This was done because the plan is to add more features in later models so to test the code for later modelling. Minor changes were made to the code from the reference notebook here to get the code to work for this project's different dataset structure.
+
+```
+sc = MinMaxScaler()
+training_set_scaled = sc.fit_transform(training_set)
+```
+
+#### Structure training data for LSTM
+For training an LSTM a sequences of time variant data in created using 60 previous times steps and their values. These sets of time periods are then used to train the model. In the code below we modify the code from the reference notebook to work with our dataset structure and set the range to start at 60 for the first set of values obtained by i-60.
+
+```
+X_train = []
+y_train = []
+for i in range(60,749):
+    X_train.append(training_set_scaled[i-60:i,0])
+    y_train.append(training_set_scaled[i,0])
+X_train, y_train = np.array(X_train), np.array(y_train)
 ```
 
 ### Model Creation
 
 #### Model 1
-For the creation model one, a similar model as the source notebook was used for the first attempt. This was an extremely simple model with the first layer of 3 neurons serving as both an input layer and a processing layer. The change made to this model was to change the output activation function from sigmoid to linear to convert the neural network from a binary classification task to a Regression task.
-
-
-#### Model 1 Details
-A model summary can be vieweed in the image below:
+For the first model we will use the LSTM from the notebook to get an idea of its current performance on this task.<br>
+Evaluating this model we can see its structure:<br>
+1. Input Layer
+- The input layer also serves as a processing layer
+- This is a LSTM layer with 50 neurons (units) designed to process sequential data
+- return_sequences is True which means this layer will output hidden states for each timestep which lower layers can access
+2. Hidden Layers
+- The model has four dropout layers to randomly drop data to prevent overfitting.
+- The model has 3 further LSTM layers with 50 neurons with the last having return_sequence set to false by default
+3. Output Layer
+- The model has an output layer which will output a single continous value
+4. Configuration
+- The model uses the rmsprop optimiser
+- The loss function is mean_squared_error as this is a Regression task
 
 ![Model 1 Summary ](Images/Model1.png)
 
-Further changes:
-- The loss function was changed the mean squared error (mse) to change the model to a Regression model.
-- Adam as the optimizer to minimise the loss function.
+##### Model 1 Evaluation
 
-#### Model 1 Evaluation
-
-As this task is changing from binary classification to Regression, to evaluate the model mean_squared_error is used instead of accuracy to assess model performance.
+As this is a Regression task, mean_squared_error is used instead of accuracy to assess model performance.<br>
+Model 1 performed very quite well with this task. We have a mean squared error of only 0.012 which given our dataset is normalised between 0 and 1 is a fairly good result. We can see that while the predicted values do not conform to small variations in the dataset, the line created does roughly follow the actual values quite well, especially when we consider the limited dataset used so far for Model 1's training.
 
 ![Model 1 Results](Images/Model1Perf.png)
 
-1. With 12 Epochs of Training:
-    - mse: 0.25
-2. With 20 Epochs of Training:
-    - mse: 0.0124
-
-
-Model 1 performance with 12 Epochs of training was an mse of .25. As all columns are normalised between 0 and 1, we can see that model performed poorly. This result is not surprising given its simplicity and short training duration.
-With an increased training duration of 20 Epochs, the model improved significantly better with an mse of .0124 showing that an increased training duration does continue to improve performance. However, this result can probably be improved with a more complex model.
-To evaluate the difference in performance between MinMaxScalar and StandardScalar, the results using StandardScalar were also tested.
-
-![SS](Images/SScaler.png)
-
-The model using the StandardScalar training data increased in performance to an mse of .00613. However, after reviewing these results, they seem too good given the simplicity of the model being used. Given this, we could guess that the model is underfitting to the data and the results obtains highly variant based on the starting weights being used.
-
-To test for this the following function was created to test for variability in the results obtained.
-
-```
-# Define function to create and train the model
-def train_model(model, X_train, y_train, epochs):
-    model.compile(loss='mean_squared_error', optimizer='adam')
-    history = model.fit(X_train, y_train, epochs=epochs, verbose=0)
-    return model, history
-
-# Train the model multiple times with normalised training data
-num_runs = 20
-mse_scores = []
-
-for i in range(num_runs):
-    print(f"Training Run {i + 1}/{num_runs}")
-    model, history = train_model(model1, X_train_norm, y_train, 20)
-    y_pred = model.predict(X_test_norm)
-    mse = mean_squared_error(y_test, y_pred)
-    print(f"MSE for Run {i + 1}/{num_runs}: {mse}")
-    mse_scores.append(mse)
-
-# Calculate average
-average_mse = np.mean(mse_scores)
-print(f"Average MSE across {num_runs} runs: {average_mse}")
-```
-
-This function trained the model 20 times and monitored how variable the results obtained were.
-![alt text](Images/variable.png)
-
-The results found did show variability across runs which may mean the model is underfitting to the overall patterns of the data and converging to local optima instead of global maximum depending on different starting conditions.
-
-
 #### Model 2
-For Model 2, the model is much more complex with the number of neurons increased to 11 and an additional hidden layer added with 11 neurons. Both layers now use Relu for their activation function in an attempt to increase the models ability to model more complex patterns in the dataset. This model also splits off a validation set from the training data so we can also evaluate its performance on unseen data as the model is trained. The training time will also be increased to give the model more time to learn the patterns in the data. 
+We saw that Model 1 was not conforming to small variations in the actual values so for Model 2, we add neurons and a fifth LSTM layer to enable the model to learn deeper complexities in the patterns in an to attempt to see if we can get a better fit. The model is switched to the Adam optimiser because although more computationally expensive, it can speed up convergence which may improve out learning rate. <br>
+Note: A test run with an increased dropout to 0.3 did not improve results so overfitting to the dataset does not seem to be the issue preventing better results, perhaps underfitting is more likely given the limited dataset. 
+The code to create Model 2 can be seen below:
 
-![Model 2](Images/Model2.png)
+```
+regressor = Sequential()
+regressor.add(LSTM(units=100, return_sequences=True, input_shape=(X_train.shape[1],1)))
+regressor.add(Dropout(0.2))
+regressor.add(LSTM(units=100, return_sequences=True))
+regressor.add(Dropout(0.2))
+regressor.add(LSTM(units=100, return_sequences=True))
+regressor.add(Dropout(0.2))
+regressor.add(LSTM(units=100, return_sequences=True))
+regressor.add(Dropout(0.2))
+regressor.add(LSTM(units=100))
+regressor.add(Dropout(0.2))
+regressor.add(Dense(units=1))
 
-#### Model 2 Evaluation
+# Compiling the RNN
+regressor.compile(optimizer='Adam',loss='mean_squared_error')
+# Fitting to the training set
+regressor.fit(X_train,y_train,epochs=50,batch_size=32)
+```
 
-![Model 2 Results](Images/M2Results.png)
+##### Model 2 Evalutaion
+This Model performs almost identically to Model 1 with a MSE of .0099 meaning adding complexity had practically no benefit in this case. This is probably because the dataset being used is small so there is not enough data for a more complex model to increase its performance.<br>
+Another interesting observation is that the model predictions from both Model 1 and Model 2 seem to be offset from the true values. This may indicate that the model is learning to simply predict the previous value in the time series and is actually not learning the pattern at all. For the next attempt I will increase the dataset size and see if this improves this issue.<br>
+On the graph below we can see how closely the model prediction are fitting with actual values.
 
-Performance:
-- Training MSE: 0.035
-- Validation MSE: .0036
-- Test MSE: 0.0046
-- Average Test MSE over 20 runs: 0.0049
-- Standard Scalar -> Average Test MSE over 20 runs 0.0079
+![Model 2 Performance](Images/Model2Perf.png)
 
-Evaluating these results:
-- Training and Validation MSE are close to each other suggesting the model performs well on unseen data.
-- Overall performance is significantly improved over Model 1 with an MSE of 0.0046 on Test Data
-- Still a gap between performance in Training vs performance on Test data suggesting that there is still variability on unseen data and the model may be overfitting to the training and validation sets. The difference however is quite small.
-- The average performance of the model over 20 training runs is close to the Test MSE suggesting the the model is converging to similar performance showing that it is not underfitting near as much as Model 1.
-- The average performance for StandardScalar is slightly worse that the performance for MinMaxScalar with .0079 vs .0049 respectively. This suggests that the unit variance in the dataset is significant to the task of learning to deduce the correct Chance to Admit
 
 #### Model 3
-For Model 3, a further change that was made to the project was to experiment with using GridSearchCV to tune hyperparameters with Neural Networks.
-Credit to https://www.kaggle.com/code/aaryandhore/neural-network-gridsearchcv-explanations for the code for using GridSearchCV with neural networks.
-The following function was adapted from the code above to produce the following function:
+For Model 3 no changes will be made to the dataset but instead the dataset will be extended to include dates from 2018 onwards to see if giving the model access too additional instances of the exchange rate fluctuations will increase model performance. This additional data was obtained by webscaping additional data from the FRED data source using the code below.
 
 ```
-from keras.models import Sequential
-from keras.layers import Dense
-from scikeras.wrappers import KerasRegressor
-from sklearn.model_selection import GridSearchCV
-import numpy as np
-
-# Define Keras model creation function
-def create_model():
-    model = Sequential()
-    model.add(Dense(11,activation='relu',input_dim=7))  
-    model.add(Dense(11,activation='relu'))       
-    model.add(Dense(1,activation='linear'))
-    model.compile(loss='mean_squared_error')
-    return model
-
-# Create KerasRegressor wrapper
-keras_regressor = KerasRegressor(build_fn=create_model)
-
-# Define parameter grid
-param_grid = {'batch_size': [16, 32],
-              'epochs': [50, 100],
-              'optimizer': ['Adam', 'RMSprop', 'SGD']}
-
-# Perform GridSearchCV
-grid_search = GridSearchCV(estimator=keras_regressor, param_grid=param_grid, cv=3, scoring='neg_mean_squared_error', verbose=2)
-grid_result = grid_search.fit(X_train, y_train)
-
-# Print best parameters and best MSE
-print("Best Parameters: ", grid_result.best_params_)
-print("Best MSE: ", grid_result.best_score_)
+tickers = ['DEXUSEU']
+end_date = datetime.date.today()
+df_extended = web.DataReader(tickers, 'fred','2018-01-01', datetime.date.today())
+total_rows = df_extended.count()
 ```
-This function tries to find the optimal parameters for the following:
-- batch size of data being fed in
-- Number of epochs of training
-- Optimizer for loss function being used with three of the most popular for Regression tested: Adam, RMSprop and SGD
 
-The optimum parameters found were: Batch Size-> 16, Epochs-> 100 and optimizer-> RMSProp 
+The graph below gives a visualisation of this extra data now spanning back to 2018.
 
-#### Model 3 Evaluation
+![Trend 2](Images/trend2.png)
 
-![Model 3 Results](Images/Model3Res.png)
-- Training Set MSE: 0.0037
-- Validation Set MSE: 0.0032
-- Test Set MSE: 0.053
+The new extended dataset was cleaned and split into training and test sets in the same manner as the previous dataset.
 
-For Model 3, the results obtained for the training and validation data are better than for model 2, however it performed slightly worse on the test data. However, the differences here are very small indicating that the results obtained through additional epochs are not increasing and show that the model is reaching its maximum performance potential. Significant further gains with this model do not seem possible with only marginal changes to the results obtained. To achieve further performance, I think that additional complexity would have to be added to the model to learn more subtle difference in the patterns withing the data.
+##### Model 3 Evaluation
+Model 3 shows no improvement when given more instances of the same data. This is not really surprising as it seems clear now from studying the graphs of the model performance, that the model is learning to simply predict the previous value as once again the prediction is just the real spot prices shifted forward. The next steps will be to try to add more indicators from which the model can learn. Upon reflection predicting a Forex price in a vacuum is probably impossible given that its pattern is controlled by external factors more than having a particular pattern a model can learn.
 
+![Model 3 Performance](Images/Model3Perf.png)
+
+#### Model 4
+For the next model, we will attempt to include some external indicators that could indicate market sentiment and thus give the model more data on how the exchange rate may change. Credit to Paul Bacher's guide found here for these indicators: https://www.kaggle.com/code/paulbacher/forex-trend-predictions-classic-ml-approach
+
+##### New Feature vector
+For the new feature vector, Yahoo Finance is used to gain more data on the fluctuations of the exchange rate with additional data on Opening and Closing exchange rate and the daily High and Low values for the rate.<br>
+Pandas_ta library is then used to calculate a number of Technical indicators from the data including Moving Averages and relative strength of buying and selling of the currencies. This new dataset is webscraped using the code below:
+
+```
+dfn = yf.download(tickers='USDEUR=X',
+                 period='2000d',
+                 interval='1d')
+dfn= dfn.drop(['Volume', 'Adj Close'], axis=1)
+dfn['ATR'] = dfn.ta.atr(length=20)
+dfn['RSI'] = dfn.ta.rsi()
+dfn['Average'] = dfn.ta.midprice(length=1)
+dfn['MA40'] = dfn.ta.sma(length=40)
+dfn['MA80'] = dfn.ta.sma(length=80)
+dfn['MA160'] = dfn.ta.sma(length=160)
+
+```
+The lengths here are the number of days used in the calculation of the various metrics.<br>
+
+Added Indicator Descriptions
+1. ATR (Average True Range): Measures market volatility by calculating the average range between the high and low prices over a specified period (in this case, 20 days).
+2. RSI (Relative Strength Index): Indicates the magnitude of recent price changes to evaluate whether a stock is overbought or oversold, typically over a 14-day period by default.
+3. Average: Calculates the average price between the high and low prices for each day, providing a reference point for market activity over a one-day period.
+4. MA40 (40-day Moving Average): Smooths out price data by calculating the average closing price over the past 40 days, providing insight into the overall trend direction.
+5. MA80 (80-day Moving Average): Similar to MA40 but calculates the average closing price over the past 80 days, offering a longer-term perspective on the trend direction.
+6. MA160 (160-day Moving Average): Computes the average closing price over the past 160 days, providing an even longer-term view of the trend direction and smoothing out short-term fluctuations.
+
+##### Data Exploration
+We can see that these features have a clear covariance which is to be expected given that the columns such as MA60 are just moving averages of the exchange rate figures. RSI is the only column which is not tightly coupled but instead jumps around which again is understandable as it is a sentiment metric measuring strength of stock market buying. The covariance of all the related columns may cause the model to overfit to a pattern which we may have to consider in model evaluation.
+
+![New Dataset](Images/dataset.png)
+
+
+##### Model 4 Evaluation
+We can see that the additional data and indicators have led to a large increase in Model performance with the predicted data conforming much better to the actual values. The predicted values do not seem to be just the previous value shifted forward anymore and there is additional conformity to smaller variations. The visual improvement is also seen in the MSE which has reduced considerable to .0050.
+
+![Model 4 Performance](Images/Model4Perf.png)
 
 ## Learning Outcomes
 
-1. **Process of constructing Custom Neural Networks**
- This project gave me experience in the process of constructing a Neural Networks with the Keras library and how layers and their composition can be controlled and modified. It also showed how the complexity of the Neural Network defines the complexity of the task it is capable of learning with too simple a model highly prone to underfitting to the patterns in the data and overfitting to noise or outliers.
+1. **Configuration of LSTMs**
+Through the project, I gained experience in configuring Long Short-Term Memory (LSTM) neural networks, including the number of units, understanding the implications of setting return sequences, and defining appropriate input shapes based on the sequential nature of the time series data.
 
-2. **Process of modifying a Neural Network from a Classification task to a Regression task**
- As part of this project, I had to modify a Neural Network to switch it from Classification to Regression which taught me about the different activation functions that can work for Regression tasks how to change the loss function to suit project requirements with mean squared error being used for this project.
+2. **Structuring Input Time Series Data into Recurrent Neural Networks**
+Working with the USD to Euro exchange rate data allowed me to develop skills in structuring input time series data into Recurrent Neural Networks (RNNs), specifically LSTMs. This involved learning how to format the data into batches of previous time periods to allow the model to gain insight into the time series patterns.
 
-3. **How GridSearchCV can be used in the tuning of Neural Networks**
- This project gave me experience of utilising GridSearchCV in the context of Artificial Neural Networks and the different parameters it is capable of cross validating such as Epochs, optimizer and batch size.
+3. **Dealing with Time Series Data and Predictive Patterns**
+ In the process of predicting the USD to Euro exchange rate, I learned about the challenges inherent in working with time series data, such as the risk of models simply predicting the previous value.
 
-4. **How additional Epochs of training has a diminishing return after a certain point**
- While increasing the number of epochs during training initially improves the model's performance by reducing the training error, there comes a point where further epochs lead to overfitting on the training data. This results in diminishing returns as the model starts to memorize the training data rather than learning generalizable patterns.
+4. **Importance of Technical Indicators in Financial Prediction**
+ This project was my first attempt at using machine learning to model financial data and through this project, I gained an appreciation for the importance of incorporating technical indicators in financial trend prediction models. Utilizing indicators like MA and RSI allow the model to learn more complex patterns in how external factors and longer moving trends relate to what direction a particular financial value is lightly to shift over time.
